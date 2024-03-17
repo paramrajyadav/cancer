@@ -1,0 +1,58 @@
+stages:
+  data_split:
+    cmd: python src/data_split.py
+    deps:
+    - src/data_split.py
+    params:
+    - base.random_state
+    - data_source.local_path
+    - split.split_ratio
+    outs:
+    - data/split
+  data_processing:
+    cmd: python src/data_processing.py data/processed
+    deps:
+    - data/split
+    - src/data_processing.py
+    params:
+    - process.dir
+    - process.test_file
+    - process.train_file
+    - split.dir
+    - split.test_file
+    - split.train_file
+    outs:
+    - data/processed
+  train:
+    cmd: python src/train.py data/features model/model.pkldvc stage add -n train -p
+      process.dir,process.train_file,process.test_file,base.random_state,base.target_col,train.n_est,model_dir
+      -d src/train.py -d data/processed -o model/model.pkl python src/train.py data/features
+      model/model.pkl
+    deps:
+    - data/processed
+    - src/train.py
+    params:
+    - base.random_state
+    - base.target_col
+    - model_dir
+    - process.dir
+    - process.test_file
+    - process.train_file
+    - train.n_est
+    outs:
+    - model/model.pkl
+  evaluate:
+    cmd: python src/evaluate.py model/model.pkl data/processed
+    deps:
+    - data/processed
+    - model/model.pkl
+    - src/evaluate.py
+    outs:
+    - eval/importance.png
+    - eval/live/plots:
+        cache: false
+    - eval/prc:
+        cache: false
+    metrics:
+    - eval/live/metrics.json:
+        cache: false
